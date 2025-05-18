@@ -154,4 +154,28 @@ Write-Log "Agent zip file removed."
 Write-Log "Azure DevOps Agent registration script finished successfully."
 
 # Run the docker installation script
-.\install-docker-ce.ps1
+# $PSScriptRoot contains the directory of the script that is currently being executed (script.ps1)
+# Both script.ps1 and install-docker-ce.ps1 are in the same download directory.
+$DockerInstallScriptPath = Join-Path -Path $PSScriptRoot -ChildPath 'install-docker-ce.ps1'
+
+Write-Log "Docker installation script expected path: $DockerInstallScriptPath"
+
+if (-not (Test-Path $DockerInstallScriptPath)) {
+    Write-Log "Error: Docker installation script 'install-docker-ce.ps1' not found at expected location: $DockerInstallScriptPath"
+    Write-Log "Listing contents of PSScriptRoot ($PSScriptRoot):"
+    Get-ChildItem -Path $PSScriptRoot | ForEach-Object { Write-Log ("  " + $_.FullName) }
+    throw "Docker installation script 'install-docker-ce.ps1' not found."
+}
+
+Write-Log "Executing Docker installation script: $DockerInstallScriptPath"
+try {
+    & $DockerInstallScriptPath
+    Write-Log "Docker installation script executed"
+}
+catch {
+    Write-Log "Error during Docker installation script execution: $($_.Exception.Message)"
+    Write-Log "Inner Exception: $($_.Exception.InnerException.Message)"
+    throw $_ # Re-throw the error to ensure the CustomScriptExtension reports failure
+}
+
+Write-Log "Docker installation process finished."
