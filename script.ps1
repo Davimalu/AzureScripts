@@ -157,29 +157,73 @@ if (Test-Path $configCmdPath) {
     Write-Log "Azure DevOps Agent registration script finished successfully."
 }
 
-# Run the docker installation script
-# $PSScriptRoot contains the directory of the script that is currently being executed (script.ps1)
-# Both script.ps1 and install-docker-ce.ps1 are in the same download directory.
-$DockerInstallScriptPath = Join-Path -Path $PSScriptRoot -ChildPath 'Install-Postgres-On-Windows.ps1'
+# Install PostgreSQL Server
 
-Write-Log "Docker installation script expected path: $DockerInstallScriptPath"
+# Installation directory for PostgreSQL
+$InstallDir = "C:\Program Files\PostgreSQL"
 
-if (-not (Test-Path $DockerInstallScriptPath)) {
-    Write-Log "Error: Docker installation script 'install-docker-ce.ps1' not found at expected location: $DockerInstallScriptPath"
-    Write-Log "Listing contents of PSScriptRoot ($PSScriptRoot):"
-    Get-ChildItem -Path $PSScriptRoot | ForEach-Object { Write-Log ("  " + $_.FullName) }
-    throw "Docker installation script 'install-docker-ce.ps1' not found."
+# Data directory for PostgreSQL
+$DataDir = "$InstallDir\data" # Or a custom path like "C:\PgData\data"
+
+# --- Password Configuration ---
+$SuperUserPassword = "StrongSuperPassword!123" # TODO: Change
+$ServicePassword = "StrongServicePassword!456" # TODO: Change
+
+# --- Download Configuration ---
+$DownloadPath = Join-Path $env:TEMP "postgresql-installer.exe"
+
+Write-Host "Starting PostgreSQL Unattended Installation Script..."
+
+# Check for Administrator Privileges
+if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Error "Administrator privileges are required to run this script. Please re-run as Administrator."
+    Exit 1
 }
 
-Write-Log "Executing Docker installation script: $DockerInstallScriptPath"
+# 1. Download PostgreSQL Installer
+Write-Host "Downloading PostgreSQL installer from $InstallerUrl to $DownloadPath..."
 try {
-    powershell.exe -Scope Process -ExecutionPolicy Bypass -File `"$DockerInstallScriptPath`" -DownloadLatest
-    Write-Log "Docker installation script executed"
+    Invoke-WebRequest -Uri "https://get.enterprisedb.com/postgresql/postgresql-17.5-1-windows-x64.exe" -OutFile $DownloadPath -UseBasicParsing
+    Write-Host "Download complete."
 }
 catch {
-    Write-Log "Error during Docker installation script execution: $($_.Exception.Message)"
-    Write-Log "Inner Exception: $($_.Exception.InnerException.Message)"
-    throw $_ # Re-throw the error to ensure the CustomScriptExtension reports failure
+    Write-Error "Failed to download PostgreSQL installer. Error: $($_.Exception.Message)"
+    Exit 1
 }
 
-Write-Log "Docker installation process finished."
+# 2. Install PostgreSQL Unattended
+Write-Host "Starting PostgreSQL installation (unattended)..."
+Write-Host "Installation Directory: $InstallDir"
+Write-Host "Data Directory: $DataDir"
+Write-Warning "Ensure the passwords used are strong and have been changed from defaults."
+
+$InstallerArguments = @(
+    "--mode unattended",
+    "--unattendedmodeui none", # No UI during installation
+    "--superpassword ""$SuperUserPassword""",
+    "--servicepassword ""$ServicePassword""",
+    "--prefix ""$InstallDir""",
+    "--datadir ""$DataDir"""
+    # --serverport 5432
+    # --servicename pgsql-16
+    # --serviceaccount postgres
+)
+
+Write-Host "Installer arguments: $InstallerArguments"
+
+try {
+    Start-Process -FilePath $DownloadPath -ArgumentList $InstallerArguments -Wait -NoNewWindow
+    Write-Host "PostgreSQL installation completed."
+}
+catch {
+    Exit 1
+}
+finally {
+    # 3. Clean up downloaded installer
+    if (Test-Path $DownloadPath) {
+        Write-Host "Removing downloaded installer: $DownloadPath"
+        Remove-Item $DownloadPath -Force
+    }
+}
+
+Write-Host "PostgreSQL Unattended Installation Script finished."
