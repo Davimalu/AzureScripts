@@ -152,3 +152,6 @@ Remove-Item $agentZipPath -ErrorAction SilentlyContinue -Force
 Write-Log "Agent zip file removed."
 
 Write-Log "Azure DevOps Agent registration script finished successfully."
+
+# Run the docker installation script
+.\install-docker-ce.ps1
