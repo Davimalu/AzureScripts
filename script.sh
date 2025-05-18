@@ -288,4 +288,7 @@ else
 fi
 
 log "Azure DevOps Agent registration and Docker installation script finished."
+
+sudo apt update && sudo apt install -y aspnetcore-runtime-8.0
+
 exit 0
