@@ -64,94 +64,98 @@ if ([string]::IsNullOrEmpty($agentSubFolder)) {
 }
 
 $agentZipPath = Join-Path -Path $PWD -ChildPath "agent.zip"
-Write-Log "Agent ZIP path set to: $agentZipPath"
+$configCmdPath = Join-Path -Path $PWD -ChildPath "config.cmd"
 
-# Download agent
-$DefaultProxy = [System.Net.WebRequest]::DefaultWebProxy
-$securityProtocolBackup = [Net.ServicePointManager]::SecurityProtocol
-try {
-    Write-Log "Setting security protocol for download (TLS 1.2 preferred)."
-    # Ensure TLS 1.2 is enabled, as older protocols are being deprecated.
-    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+if (Test-Path $configCmdPath) {
+    Write-Log "Agent executable (config.cmd) already exists at '$configCmdPath'. Skipping installation..."
+} else {
+    # Download agent
+    $DefaultProxy = [System.Net.WebRequest]::DefaultWebProxy
+    $securityProtocolBackup = [Net.ServicePointManager]::SecurityProtocol
+    try {
+        Write-Log "Setting security protocol for download (TLS 1.2 preferred)."
+        # Ensure TLS 1.2 is enabled, as older protocols are being deprecated.
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        
+        $WebClient = New-Object Net.WebClient
+        if ($DefaultProxy -and (-not $DefaultProxy.IsBypassed($AgentDownloadUrl))) {
+            $WebClient.Proxy = New-Object Net.WebProxy($DefaultProxy.GetProxy($AgentDownloadUrl).OriginalString, $True)
+            Write-Log "Using system proxy: $($WebClient.Proxy.Address)"
+        }
     
-    $WebClient = New-Object Net.WebClient
-    if ($DefaultProxy -and (-not $DefaultProxy.IsBypassed($AgentDownloadUrl))) {
-        $WebClient.Proxy = New-Object Net.WebProxy($DefaultProxy.GetProxy($AgentDownloadUrl).OriginalString, $True)
-        Write-Log "Using system proxy: $($WebClient.Proxy.Address)"
+        Write-Log "Downloading Azure DevOps Agent from $AgentDownloadUrl to $agentZipPath..."
+        $WebClient.DownloadFile($AgentDownloadUrl, $agentZipPath)
+        Write-Log "Agent downloaded successfully."
     }
-
-    Write-Log "Downloading Azure DevOps Agent from $AgentDownloadUrl to $agentZipPath..."
-    $WebClient.DownloadFile($AgentDownloadUrl, $agentZipPath)
-    Write-Log "Agent downloaded successfully."
-}
-catch {
-    Write-Log "Error: Failed to download agent. $($_.Exception.Message) - $($_.Exception.InnerException.Message)"
-    throw $_
-}
-finally {
-    Write-Log "Restoring original security protocol."
-    [Net.ServicePointManager]::SecurityProtocol = $securityProtocolBackup
-}
-
-# Extract agent
-Write-Log "Extracting agent from $agentZipPath to $PWD..."
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-[System.IO.Compression.ZipFile]::ExtractToDirectory($agentZipPath, "$PWD")
-Write-Log "Agent extracted successfully."
-
-# Configure agent
-$agentName = $env:COMPUTERNAME
-$workDir = '_work'
-
-Write-Log "Configuring agent with the following parameters:"
-Write-Log "  Agent Name: $agentName"
-Write-Log "  Environment Name: $AzureDevOpsEnvironmentName"
-Write-Log "  Azure DevOps URL: $AzureDevOpsURL"
-Write-Log "  Project Name: $AzureDevOpsProjectName"
-Write-Log "  Work Directory: $workDir"
-Write-Log "  Authentication Type: PAT (Token will not be logged)"
-
-if ([string]::IsNullOrWhiteSpace($PAToken)) {
-    Write-Log "Error: PAToken parameter is null or empty. Agent cannot be configured."
-    throw "PAToken is null or empty. Cannot configure agent."
-}
-
-$configScriptPath = Join-Path -Path $PWD -ChildPath 'config.cmd'
-$configArgs = @(
-    '--environment',
-    '--environmentname', $AzureDevOpsEnvironmentName,
-    '--agent', $agentName,
-    '--runasservice',        # Ensures the agent runs as a Windows service
-    '--work', $workDir,
-    '--url', $AzureDevOpsURL,
-    '--projectname', $AzureDevOpsProjectName,
-    '--auth', 'PAT',
-    '--token', $PAToken,
-    '--unattended'          # Important for non-interactive setup
-)
-
-Write-Log "Executing agent configuration: $configScriptPath $($configArgs -join ' ')" # Exercise caution logging this if PAT was accidentally included in $configArgs for logging
-                                                                                    # Current $configArgs setup is safe as $PAToken is separate.
-try {
-    # Using Start-Process to ensure proper execution of .cmd and capture exit code if needed.
-    $process = Start-Process -FilePath $configScriptPath -ArgumentList $configArgs -Wait -PassThru -NoNewWindow
-    if ($process.ExitCode -ne 0) {
-        Write-Log "Error: Agent configuration script (config.cmd) exited with code $($process.ExitCode)."
-        throw "Agent configuration failed with exit code $($process.ExitCode)."
+    catch {
+        Write-Log "Error: Failed to download agent. $($_.Exception.Message) - $($_.Exception.InnerException.Message)"
+        throw $_
     }
-    Write-Log "Agent configuration script (config.cmd) completed successfully."
+    finally {
+        Write-Log "Restoring original security protocol."
+        [Net.ServicePointManager]::SecurityProtocol = $securityProtocolBackup
+    }
+    
+    # Extract agent
+    Write-Log "Extracting agent from $agentZipPath to $PWD..."
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($agentZipPath, "$PWD")
+    Write-Log "Agent extracted successfully."
+    
+    # Configure agent
+    $agentName = $env:COMPUTERNAME
+    $workDir = '_work'
+    
+    Write-Log "Configuring agent with the following parameters:"
+    Write-Log "  Agent Name: $agentName"
+    Write-Log "  Environment Name: $AzureDevOpsEnvironmentName"
+    Write-Log "  Azure DevOps URL: $AzureDevOpsURL"
+    Write-Log "  Project Name: $AzureDevOpsProjectName"
+    Write-Log "  Work Directory: $workDir"
+    Write-Log "  Authentication Type: PAT (Token will not be logged)"
+    
+    if ([string]::IsNullOrWhiteSpace($PAToken)) {
+        Write-Log "Error: PAToken parameter is null or empty. Agent cannot be configured."
+        throw "PAToken is null or empty. Cannot configure agent."
+    }
+    
+    $configScriptPath = Join-Path -Path $PWD -ChildPath 'config.cmd'
+    $configArgs = @(
+        '--environment',
+        '--environmentname', $AzureDevOpsEnvironmentName,
+        '--agent', $agentName,
+        '--runasservice',        # Ensures the agent runs as a Windows service
+        '--work', $workDir,
+        '--url', $AzureDevOpsURL,
+        '--projectname', $AzureDevOpsProjectName,
+        '--auth', 'PAT',
+        '--token', $PAToken,
+        '--unattended'          # use the non-interactive setup
+    )
+    
+    Write-Log "Executing agent configuration: $configScriptPath $($configArgs -join ' ')" 
+    
+    try {
+        # Using Start-Process to ensure proper execution of .cmd and capture exit code if needed.
+        $process = Start-Process -FilePath $configScriptPath -ArgumentList $configArgs -Wait -PassThru -NoNewWindow
+        if ($process.ExitCode -ne 0) {
+            Write-Log "Error: Agent configuration script (config.cmd) exited with code $($process.ExitCode)."
+            throw "Agent configuration failed with exit code $($process.ExitCode)."
+        }
+        Write-Log "Agent configuration script (config.cmd) completed successfully."
+    }
+    catch {
+        Write-Log "Error: Exception during agent configuration. $($_.Exception.Message)"
+        throw $_
+    }
+    
+    # Clean up downloaded agent zip file
+    Write-Log "Removing agent zip file: $agentZipPath"
+    Remove-Item $agentZipPath -ErrorAction SilentlyContinue -Force
+    Write-Log "Agent zip file removed."
+    
+    Write-Log "Azure DevOps Agent registration script finished successfully."
 }
-catch {
-    Write-Log "Error: Exception during agent configuration. $($_.Exception.Message)"
-    throw $_
-}
-
-# Clean up downloaded agent zip file
-Write-Log "Removing agent zip file: $agentZipPath"
-Remove-Item $agentZipPath -ErrorAction SilentlyContinue -Force
-Write-Log "Agent zip file removed."
-
-Write-Log "Azure DevOps Agent registration script finished successfully."
 
 # Run the docker installation script
 # $PSScriptRoot contains the directory of the script that is currently being executed (script.ps1)
