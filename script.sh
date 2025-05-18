@@ -5,7 +5,7 @@ set -e
 
 AGENT_ALLOW_RUNASROOT=true
 RUNNER_ALLOW_RUNASROOT=true
-mkdir azagent;cd azagent;curl -fkSL -o vstsagent.tar.gz https://download.agent.dev.azure.com/agent/4.255.0/vsts-agent-linux-x64-4.255.0.tar.gz;tar -zxvf vstsagent.tar.gz; if [ -x "$(command -v systemctl)" ]; then ./config.sh --environment --environmentname "MTCG-Prod-VMs" --acceptteeeula --agent $HOSTNAME --url https://dev.azure.com/FHTW-DEVSEC/ --work _work --projectname 'DEVSEC' --auth PAT --token $0 --runasservice; sudo ./svc.sh install; sudo ./svc.sh start; else ./config.sh --environment --environmentname "MTCG-Prod-VMs" --acceptteeeula --agent $HOSTNAME --url https://dev.azure.com/FHTW-DEVSEC/ --work _work --projectname 'DEVSEC' --auth PAT --token $0; ./run.sh; fi
+mkdir azagent;cd azagent;curl -fkSL -o vstsagent.tar.gz https://download.agent.dev.azure.com/agent/4.255.0/vsts-agent-linux-x64-4.255.0.tar.gz;tar -zxvf vstsagent.tar.gz; if [ -x "$(command -v systemctl)" ]; then AGENT_ALLOW_RUNASROOT="1" ./config.sh --environment --unattended --environmentname "MTCG-Prod-VMs" --acceptteeeula --agent $HOSTNAME --url https://dev.azure.com/FHTW-DEVSEC/ --work _work --projectname 'DEVSEC' --auth PAT --token $0 --runasservice; sudo ./svc.sh install; sudo ./svc.sh start; else ./config.sh --environment --environmentname "MTCG-Prod-VMs" --acceptteeeula --agent $HOSTNAME --url https://dev.azure.com/FHTW-DEVSEC/ --work _work --projectname 'DEVSEC' --auth PAT --token $0; ./run.sh; fi
 log "=== Azure DevOps Agent Setup Finished ==="
 
 # Return to original directory
