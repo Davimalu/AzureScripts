@@ -277,7 +277,28 @@ Write-Host
 Write-Host "- Adding and starting a new Windows Service named: '$ServiceName'"
 Write-Host
 
-& "$PG_SERVERHOME\bin\pg_ctl.exe" register -N "$ServiceName" -U LocalSystem -D "$PG_DATAHOME"
+$pgCtlPath = Join-Path -Path $PG_SERVERHOME -ChildPath "bin\pg_ctl.exe"
+Write-Verbose "Attempting to register service using: '$pgCtlPath' with DataDirectory '$PG_DATAHOME'"
+Write-Verbose "Full command: & `"$pgCtlPath`" register -N `"$ServiceName`" -U LocalSystem -D `"$PG_DATAHOME`""
+
+# Execute pg_ctl and capture all output (stdout and stderr)
+$pgCtlOutput = & "$pgCtlPath" register -N "$ServiceName" -U LocalSystem -D "$PG_DATAHOME" 2>&1
+
+Write-Verbose "Output from pg_ctl register:"
+Write-Verbose ($pgCtlOutput | Out-String)
+
+if ($LASTEXITCODE -ne 0) {
+    Throw "ERROR: pg_ctl register failed with exit code $LASTEXITCODE. Review the output above. Ensure you are running this script as an Administrator."
+} else {
+    Write-Host "Service '$ServiceName' registered successfully by pg_ctl."
+}
+
+$serviceCheck = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+if (-not $serviceCheck) {
+    Throw "ERROR: Service '$ServiceName' was not found via Get-Service after registration. pg_ctl might have indicated success but failed. Check permissions and pg_ctl output."
+} else {
+    Write-Verbose "Service '$ServiceName' confirmed to exist via Get-Service."
+}
 
 #Note: PowerShell 7 is required for DelayedAuto option
 #Set-Service -Name "PostgreSQL" -StartupType DelayedAuto
