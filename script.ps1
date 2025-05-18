@@ -204,8 +204,8 @@ $InstallerArguments = @(
     "--servicepassword ""$ServicePassword""",
     "--prefix ""$InstallDir""",
     "--datadir ""$DataDir"""
-    # --serverport 5432
-    # --servicename pgsql-16
+    "--servicename pgsql-16"
+    # "--serverport 5432"
     # --serviceaccount postgres
 )
 
