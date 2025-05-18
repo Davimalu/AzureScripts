@@ -4,12 +4,6 @@
 set -e
 
 mkdir azagent;cd azagent;curl -fkSL -o vstsagent.tar.gz https://download.agent.dev.azure.com/agent/4.255.0/vsts-agent-linux-x64-4.255.0.tar.gz;tar -zxvf vstsagent.tar.gz; if [ -x "$(command -v systemctl)" ]; then AGENT_ALLOW_RUNASROOT="1" ./config.sh --environment --unattended --environmentname "MTCG-Prod-VMs" --acceptteeeula --agent $HOSTNAME --url https://dev.azure.com/FHTW-DEVSEC/ --work _work --projectname 'DEVSEC' --auth PAT --token $1 --runasservice; sudo ./svc.sh install; sudo ./svc.sh start; else ./config.sh --environment --environmentname "MTCG-Prod-VMs" --acceptteeeula --agent $HOSTNAME --url https://dev.azure.com/FHTW-DEVSEC/ --work _work --projectname 'DEVSEC' --auth PAT --token $1; ./run.sh; fi
-log "=== Azure DevOps Agent Setup Finished ==="
-
-# Return to original directory
-cd "$original_dir"
-log "Changed current directory back to: $(pwd)"
-
 
 # --- Docker Installation (Example for Debian/Ubuntu) ---
 for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
