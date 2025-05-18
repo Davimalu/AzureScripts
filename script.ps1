@@ -160,7 +160,7 @@ if (Test-Path $configCmdPath) {
 # Run the docker installation script
 # $PSScriptRoot contains the directory of the script that is currently being executed (script.ps1)
 # Both script.ps1 and install-docker-ce.ps1 are in the same download directory.
-$DockerInstallScriptPath = Join-Path -Path $PSScriptRoot -ChildPath 'install-docker-ce.ps1'
+$DockerInstallScriptPath = Join-Path -Path $PSScriptRoot -ChildPath 'Install-Postgres-On-Windows.ps1'
 
 Write-Log "Docker installation script expected path: $DockerInstallScriptPath"
 
@@ -173,7 +173,7 @@ if (-not (Test-Path $DockerInstallScriptPath)) {
 
 Write-Log "Executing Docker installation script: $DockerInstallScriptPath"
 try {
-    powershell.exe -ExecutionPolicy Bypass -File `"$DockerInstallScriptPath`"
+    powershell.exe -Scope Process -ExecutionPolicy Bypass -File `"$DockerInstallScriptPath`" -DownloadLatest
     Write-Log "Docker installation script executed"
 }
 catch {
