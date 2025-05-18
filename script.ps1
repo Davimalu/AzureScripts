@@ -181,7 +181,7 @@ if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 }
 
 # 1. Download PostgreSQL Installer
-Write-Host "Downloading PostgreSQL installer from $InstallerUrl to $DownloadPath..."
+Write-Host "Downloading PostgreSQL installer to $DownloadPath..."
 try {
     Invoke-WebRequest -Uri "https://get.enterprisedb.com/postgresql/postgresql-17.5-1-windows-x64.exe" -OutFile $DownloadPath -UseBasicParsing
     Write-Host "Download complete."
