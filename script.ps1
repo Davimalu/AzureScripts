@@ -173,7 +173,7 @@ if (-not (Test-Path $DockerInstallScriptPath)) {
 
 Write-Log "Executing Docker installation script: $DockerInstallScriptPath"
 try {
-    & $DockerInstallScriptPath
+    powershell.exe -ExecutionPolicy Bypass -File `"$DockerInstallScriptPath`"
     Write-Log "Docker installation script executed"
 }
 catch {
