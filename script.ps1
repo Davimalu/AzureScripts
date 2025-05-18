@@ -158,21 +158,9 @@ if (Test-Path $configCmdPath) {
 }
 
 # Install PostgreSQL Server
+Join-Path $env:TEMP "Docker Desktop Installer.exe"
 
-# Installation directory for PostgreSQL
-$InstallDir = "C:\Program Files\PostgreSQL"
-
-# Data directory for PostgreSQL
-$DataDir = "$InstallDir\data" # Or a custom path like "C:\PgData\data"
-
-# --- Password Configuration ---
-$SuperUserPassword = "StrongSuperPassword!123" # TODO: Change
-$ServicePassword = "StrongServicePassword!456" # TODO: Change
-
-# --- Download Configuration ---
-$DownloadPath = Join-Path $env:TEMP "postgresql-installer.exe"
-
-Write-Host "Starting PostgreSQL Unattended Installation Script..."
+Write-Host "Starting Docker Desktop Unattended Installation Script..."
 
 # Check for Administrator Privileges
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -180,10 +168,13 @@ if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     Exit 1
 }
 
-# 1. Download PostgreSQL Installer
-Write-Host "Downloading PostgreSQL installer to $DownloadPath..."
+# Install Docker Unattended
+$DownloadPath = Join-Path $env:TEMP "Docker Desktop Installer.exe"
+Invoke-WebRequest -Uri "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe?utm_source=docker&utm_medium=webreferral&utm_campaign=docs-driven-download-win-amd64" -OutFile $DownloadPath -UseBasicParsing
+
+Write-Host "Downloading Docker Desktop installer to $DownloadPath..."
 try {
-    Invoke-WebRequest -Uri "https://get.enterprisedb.com/postgresql/postgresql-17.5-1-windows-x64.exe" -OutFile $DownloadPath -UseBasicParsing
+    Invoke-WebRequest -Uri "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe?utm_source=docker&utm_medium=webreferral&utm_campaign=docs-driven-download-win-amd64" -OutFile $DownloadPath -UseBasicParsing
     Write-Host "Download complete."
 }
 catch {
@@ -191,39 +182,15 @@ catch {
     Exit 1
 }
 
-# 2. Install PostgreSQL Unattended
-Write-Host "Starting PostgreSQL installation (unattended)..."
-Write-Host "Installation Directory: $InstallDir"
-Write-Host "Data Directory: $DataDir"
-Write-Warning "Ensure the passwords used are strong and have been changed from defaults."
 
-$InstallerArguments = @(
-    "--mode unattended",
-    "--unattendedmodeui none", # No UI during installation
-    "--superpassword ""$SuperUserPassword""",
-    "--servicepassword ""$ServicePassword""",
-    "--prefix ""$InstallDir""",
-    "--datadir ""$DataDir""",
-    "--servicename pgsql-16"
-    # "--serverport 5432"
-    # --serviceaccount postgres
-)
-
-Write-Host "Installer arguments: $InstallerArguments"
+Write-Host "Starting Docker installation (unattended)..."
 
 try {
-    Start-Process -FilePath $DownloadPath -ArgumentList $InstallerArguments -Wait -NoNewWindow
+    Start-Process -FilePath $DownloadPath -Wait install --always-run-service --accept-license 
     Write-Host "PostgreSQL installation completed."
 }
 catch {
     Exit 1
 }
-finally {
-    # 3. Clean up downloaded installer
-    if (Test-Path $DownloadPath) {
-        Write-Host "Removing downloaded installer: $DownloadPath"
-        Remove-Item $DownloadPath -Force
-    }
-}
 
-Write-Host "PostgreSQL Unattended Installation Script finished."
+Write-Host "Docker Unattended Installation Script finished."
